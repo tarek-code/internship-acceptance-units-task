@@ -15,6 +15,7 @@ spec:
       containers:
         - name: backend
           image: tarekadel/backend-image:latest
+          imagePullPolicy: Always
           ports:
             - containerPort: 3000
           resources:
