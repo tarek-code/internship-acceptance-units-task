@@ -313,3 +313,115 @@ Expected output should include your inserted document:
   - running system demo
   - autoscaling demo
   - failover demo (delete backend pod and Mongo pod)
+
+## 11) Troubleshooting (Real Issues and Fixes)
+
+### Issue A: `Cannot find module 'mongoose'`
+
+Error:
+
+```bash
+Error: Cannot find module 'mongoose'
+Require stack:
+- /app/index.js
+```
+
+Why it happened:
+- Backend code required `mongoose`, but running container image did not include it (old image was still used).
+
+Fix:
+1. Add dependency to backend:
+
+```bash
+cd backend
+npm install mongoose
+```
+
+2. Rebuild and push image (`latest`):
+
+```bash
+docker build --no-cache -f backend/Dockerfile -t tarekadel/backend-image:latest backend
+docker push tarekadel/backend-image:latest
+```
+
+3. Verify image locally before deploy:
+
+```bash
+docker run --rm tarekadel/backend-image:latest node -e "console.log(require('mongoose').version)"
+```
+
+4. Ensure deployment always pulls latest:
+
+```yaml
+image: tarekadel/backend-image:latest
+imagePullPolicy: Always
+```
+
+5. Restart deployment:
+
+```bash
+kubectl rollout restart deployment/backend-deployment
+kubectl rollout status deployment/backend-deployment
+```
+
+### Issue B: Ingress returns `404 Not Found (nginx)`
+
+Error:
+
+```bash
+curl -H "Host: backend.local" http://localhost:8080
+# 404 Not Found (nginx)
+```
+
+Why it happened:
+- Ingress resource was not present in cluster at that moment (`No resources found` for ingress).
+
+Fix:
+1. Apply ingress from correct project path:
+
+```bash
+cd ~/internship-acceptance-units-task
+kubectl apply -f K8s/ingress.yaml -n default
+```
+
+2. Verify ingress exists and routes to backend service:
+
+```bash
+kubectl describe ingress backend-ingress -n default
+```
+
+3. Keep ingress controller port-forward running in one terminal:
+
+```bash
+kubectl port-forward -n ingress-nginx service/ingress-nginx-controller 8080:80
+```
+
+4. Test in another terminal:
+
+```bash
+curl -H "Host: backend.local" http://localhost:8080
+```
+
+Expected success response:
+
+```text
+API is working 🚀
+```
+
+### Issue C: `kubectl apply -f K8s/service.yaml` path not found
+
+Error:
+
+```bash
+error: the path "K8s/service.yaml" does not exist
+```
+
+Why it happened:
+- Command was run from `~` instead of repository folder.
+
+Fix:
+
+```bash
+cd ~/internship-acceptance-units-task
+kubectl apply -f K8s/service.yaml
+```
