@@ -220,7 +220,9 @@ Set args like this:
 args:
   - --cert-dir=/tmp
   - --secure-port=10250
-  - --kubelet-preferred-address-types=InternalIP
+  - --kubelet-preferred-address-types=InternalIP,ExternalIP,Hostname
+  - --kubelet-use-node-status-port
+  - --metric-resolution=15s
   - --kubelet-insecure-tls
 ```
 
