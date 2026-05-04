@@ -9,6 +9,43 @@ This project demonstrates building and deploying a scalable backend service on K
 - MongoDB StatefulSet + ReplicaSet
 - High availability and data persistence validation
 
+## Project Explanation
+
+This project is an end-to-end implementation of a production-like backend environment on Kubernetes.  
+It starts with a containerized Node.js backend API, then deploys it using Kubernetes best practices for networking, scalability, and resilience.
+
+The main goal is to prove that the application can:
+
+- serve requests through Ingress,
+- scale automatically when CPU load increases,
+- keep working during pod failures,
+- and preserve database data through restarts and failover scenarios.
+
+By combining backend deployment, autoscaling, and a replicated MongoDB database, the project demonstrates core DevOps concepts required for real-world cloud systems.
+
+## Architecture Explanation
+
+The system follows a layered architecture:
+
+1. **Client Layer**  
+   Users send HTTP requests to the public endpoint (for example `backend.local`).
+
+2. **Ingress Layer (NGINX Ingress Controller)**  
+   Ingress receives external traffic and routes requests to the backend Kubernetes Service.
+
+3. **Service Layer (Cluster Networking)**  
+   `backend-service` provides a stable internal endpoint and load-balances traffic across backend pods.
+
+4. **Application Layer (Backend Deployment)**  
+   The backend runs as a Deployment with multiple replicas.  
+   HPA monitors CPU usage and scales pods between `minReplicas: 1` and `maxReplicas: 5` (target ~70% CPU).
+
+5. **Data Layer (MongoDB StatefulSet + ReplicaSet)**  
+   MongoDB runs as a StatefulSet (`mongo-0`, `mongo-1`, `mongo-2`) with stable network identities and persistent storage.  
+   ReplicaSet `rs0` provides PRIMARY/SECONDARY replication, failover, and data durability.
+
+This architecture ensures availability, scalability, and persistence, even when individual pods are deleted or restarted.
+
 ## Project Requirements
 
 1. Build a simple backend API (for example CRUD endpoints).
