@@ -1,6 +1,7 @@
 # Backend Scalable Service on Kubernetes
 
 This project demonstrates building and deploying a scalable backend service on Kubernetes with:
+
 - Backend API
 - Docker image
 - Kubernetes Deployment + Service + Ingress
@@ -15,8 +16,8 @@ This project demonstrates building and deploying a scalable backend service on K
 3. Deploy to cloud/Kubernetes.
 4. Use Kubernetes Deployment for backend.
 5. Configure autoscaling with:
-   - `minReplicas: 1`
-   - `maxReplicas: 5`
+  - `minReplicas: 1`
+  - `maxReplicas: 5`
 6. Implement HPA based on CPU usage.
 7. Deploy MongoDB as StatefulSet with ReplicaSet.
 8. Expose backend with Service and Ingress.
@@ -81,9 +82,11 @@ kubectl get ingress
 ```
 
 Important for NGINX controller binding:
+
 - Ensure `ingressClassName: nginx` is set in `K8s/ingress.yaml`.
 
 For KillerShell/Killercoda environments:
+
 - `ADDRESS` in `kubectl get ingress` can be empty (this is normal).
 - Use port-forward on ingress controller service:
 
@@ -102,7 +105,7 @@ curl -H "Host: backend.local" http://localhost:8080
 Create HPA for `backend-deployment`:
 
 ```bash
-kubectl autoscale deployment backend-deployment --cpu-percent=40 --min=1 --max=5
+kubectl autoscale deployment backend-deployment --cpu-percent=70 --min=1 --max=5
 ```
 
 Check HPA and pods:
@@ -119,6 +122,7 @@ kubectl edit hpa backend-deployment
 ```
 
 Important note:
+
 - `kubectl autoscale ...` creates a new HPA (it does not update an existing one with the same name).
 - To change target (for example `70` -> `40`), use `kubectl edit hpa ...` or delete/recreate HPA.
 
@@ -143,6 +147,7 @@ kubectl delete pod load-generator
 ```
 
 Note about scale down:
+
 - HPA scales up quickly.
 - Scale down can take time due to stabilization/cooldown behavior.
 
@@ -327,9 +332,11 @@ Require stack:
 ```
 
 Why it happened:
+
 - Backend code required `mongoose`, but running container image did not include it (old image was still used).
 
 Fix:
+
 1. Add dependency to backend:
 
 ```bash
@@ -337,27 +344,27 @@ cd backend
 npm install mongoose
 ```
 
-2. Rebuild and push image (`latest`):
+1. Rebuild and push image (`latest`):
 
 ```bash
 docker build --no-cache -f backend/Dockerfile -t tarekadel/backend-image:latest backend
 docker push tarekadel/backend-image:latest
 ```
 
-3. Verify image locally before deploy:
+1. Verify image locally before deploy:
 
 ```bash
 docker run --rm tarekadel/backend-image:latest node -e "console.log(require('mongoose').version)"
 ```
 
-4. Ensure deployment always pulls latest:
+1. Ensure deployment always pulls latest:
 
 ```yaml
 image: tarekadel/backend-image:latest
 imagePullPolicy: Always
 ```
 
-5. Restart deployment:
+1. Restart deployment:
 
 ```bash
 kubectl rollout restart deployment/backend-deployment
@@ -374,9 +381,11 @@ curl -H "Host: backend.local" http://localhost:8080
 ```
 
 Why it happened:
+
 - Ingress resource was not present in cluster at that moment (`No resources found` for ingress).
 
 Fix:
+
 1. Apply ingress from correct project path:
 
 ```bash
@@ -384,19 +393,19 @@ cd ~/internship-acceptance-units-task
 kubectl apply -f K8s/ingress.yaml -n default
 ```
 
-2. Verify ingress exists and routes to backend service:
+1. Verify ingress exists and routes to backend service:
 
 ```bash
 kubectl describe ingress backend-ingress -n default
 ```
 
-3. Keep ingress controller port-forward running in one terminal:
+1. Keep ingress controller port-forward running in one terminal:
 
 ```bash
 kubectl port-forward -n ingress-nginx service/ingress-nginx-controller 8080:80
 ```
 
-4. Test in another terminal:
+1. Test in another terminal:
 
 ```bash
 curl -H "Host: backend.local" http://localhost:8080
@@ -417,6 +426,7 @@ error: the path "K8s/service.yaml" does not exist
 ```
 
 Why it happened:
+
 - Command was run from `~` instead of repository folder.
 
 Fix:
@@ -429,27 +439,30 @@ kubectl apply -f K8s/service.yaml
 ### Issue D: Mongo ReplicaSet initialized but all members show `SECONDARY`
 
 Observed state after `rs.initiate(...)`:
+
 - `ok: 1` (init succeeded)
 - members were temporarily all `SECONDARY`
 - backend could still show `ReplicaSetNoPrimary` until election completes
 
 Why it happened:
+
 - Immediately after initialization, ReplicaSet can need a short time to elect a `PRIMARY`.
 
 Fix / validation:
+
 1. Wait a short period (10 to 30 seconds), then recheck:
 
 ```javascript
 rs.status().members.map(m => ({ name: m.name, state: m.stateStr }))
 ```
 
-2. If no `PRIMARY` appears, force election from one node (for example `mongo-0`):
+1. If no `PRIMARY` appears, force election from one node (for example `mongo-0`):
 
 ```javascript
 rs.stepUp()
 ```
 
-3. Confirm primary election:
+1. Confirm primary election:
 
 ```javascript
 rs.isMaster()
@@ -458,6 +471,8 @@ db.hello()
 ```
 
 Expected result:
+
 - one member becomes `PRIMARY`
 - remaining members stay `SECONDARY`
 - backend Mongo connection error `ReplicaSetNoPrimary` should disappear
+
