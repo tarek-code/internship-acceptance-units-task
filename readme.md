@@ -425,3 +425,39 @@ Fix:
 cd ~/internship-acceptance-units-task
 kubectl apply -f K8s/service.yaml
 ```
+
+### Issue D: Mongo ReplicaSet initialized but all members show `SECONDARY`
+
+Observed state after `rs.initiate(...)`:
+- `ok: 1` (init succeeded)
+- members were temporarily all `SECONDARY`
+- backend could still show `ReplicaSetNoPrimary` until election completes
+
+Why it happened:
+- Immediately after initialization, ReplicaSet can need a short time to elect a `PRIMARY`.
+
+Fix / validation:
+1. Wait a short period (10 to 30 seconds), then recheck:
+
+```javascript
+rs.status().members.map(m => ({ name: m.name, state: m.stateStr }))
+```
+
+2. If no `PRIMARY` appears, force election from one node (for example `mongo-0`):
+
+```javascript
+rs.stepUp()
+```
+
+3. Confirm primary election:
+
+```javascript
+rs.isMaster()
+// or
+db.hello()
+```
+
+Expected result:
+- one member becomes `PRIMARY`
+- remaining members stay `SECONDARY`
+- backend Mongo connection error `ReplicaSetNoPrimary` should disappear
