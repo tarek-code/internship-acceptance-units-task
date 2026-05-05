@@ -433,8 +433,8 @@ kubectl exec -it mongo-0 -- mongosh
 Run:
 
 ```javascript
-use testdb
-db.users.insertOne({ name: "tarek", role: "devops" })
+use mydb
+db.items.insertOne({ name: "tarek" })
 db.users.find()
 exit
 ```
@@ -453,7 +453,7 @@ kubectl exec -it mongo-0 -- mongosh
 ```
 
 ```javascript
-use testdb
+use mydb
 db.users.find()
 ```
 
@@ -634,4 +634,55 @@ Expected result:
 - one member becomes `PRIMARY`
 - remaining members stay `SECONDARY`
 - backend Mongo connection error `ReplicaSetNoPrimary` should disappear
+
+### Issue E: `ReferenceError: crypto is not defined` while calling `/items`
+
+Error:
+
+```bash
+ReferenceError: crypto is not defined
+at uuidV4 (/app/node_modules/mongodb/lib/utils.js:286:20)
+```
+
+What happened:
+
+- Backend logs showed `MongoDB connected`, but CRUD requests (`GET /items`, `POST /items`) still failed.
+- The running backend pod was still using Node `v18.x`, while current MongoDB driver path required Web Crypto support available in newer runtime behavior.
+- Deployment also kept serving an older image digest even after pushing new `latest`.
+
+Fix:
+
+1. Update backend runtime image to Node 20 in `backend/Dockerfile`:
+
+```dockerfile
+FROM node:20
+```
+
+2. Rebuild and push a fresh image:
+
+```bash
+docker build --no-cache -f backend/Dockerfile -t tarekadel/backend-image:latest backend
+docker push tarekadel/backend-image:latest
+```
+
+3. Force deployment to the exact pushed digest:
+
+```bash
+kubectl set image deployment/backend-deployment \
+  backend=tarekadel/backend-image@sha256:<pushed_digest>
+kubectl rollout status deployment/backend-deployment
+```
+
+4. Verify runtime and image in pod:
+
+```bash
+kubectl exec -it deploy/backend-deployment -- node -v
+kubectl get pod -l app=backend -o jsonpath="{.items[0].status.containerStatuses[0].imageID}"
+```
+
+Expected result:
+
+- Node version in pod is `v20.x`
+- Pod image digest matches the latest pushed digest
+- `curl -H "Host: backend.local" http://localhost:8080/items` returns JSON (for example `[]`) without `crypto` errors
 
