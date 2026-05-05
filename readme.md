@@ -27,6 +27,8 @@ By combining backend deployment, autoscaling, and a replicated MongoDB database,
 
 The system follows a layered architecture:
 
+![Backend Scalable Service Architecture](Architecture/Backend-scalable-service.png)
+
 1. **Client Layer**  
    Users send HTTP requests to the public endpoint (for example `backend.local`).
 
