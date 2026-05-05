@@ -152,6 +152,47 @@ Test with host header:
 curl -H "Host: backend.local" http://localhost:8080
 ```
 
+### Optional: Expose Backend with NodePort (Not required for this task)
+
+Use this only if you need direct node access (`NODE_IP:NODE_PORT`).
+For the assignment requirement, keep `ClusterIP + Ingress`.
+
+Example service:
+
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-service
+spec:
+  selector:
+    app: backend
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 3000
+      nodePort: 30080
+  type: NodePort
+```
+
+Apply and verify:
+
+```bash
+kubectl apply -f K8s/service.yaml
+kubectl get svc backend-service
+```
+
+Access endpoint:
+
+```text
+http://<NODE_IP>:30080
+```
+
+Notes:
+
+- NodePort range is usually `30000-32767`.
+- In cloud environments, open this port in your VM firewall / security group.
+
 ## 4) Create and Manage HPA
 
 Apply HPA manifest for `backend-deployment`:
