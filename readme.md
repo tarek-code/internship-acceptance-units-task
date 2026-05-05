@@ -2,7 +2,7 @@
 
 This project demonstrates building and deploying a scalable backend service on Kubernetes with:
 
-- Backend API
+- Backend CRUD API (Items)
 - Docker image
 - Kubernetes Deployment + Service + Ingress
 - HPA (CPU based autoscaling)
@@ -34,11 +34,11 @@ The system follows a layered architecture:
    Ingress receives external traffic and routes requests to the backend Kubernetes Service.
 
 3. **Service Layer (Cluster Networking)**  
-   `backend-service` provides a stable internal endpoint and load-balances traffic across backend pods.
+   `backend-service` is exposed as `ClusterIP` for internal communication and load-balances traffic across backend pods.
 
-4. **Application Layer (Backend Deployment)**  
+4. **Application Layer (Backend Deployment + HPA)**  
    The backend runs as a Deployment with multiple replicas.  
-   HPA monitors CPU usage and scales pods between `minReplicas: 1` and `maxReplicas: 5` (target ~70% CPU).
+   HPA (from `K8s/hpa.yaml`) monitors CPU usage and scales pods between `minReplicas: 1` and `maxReplicas: 5` (target `70%`).
 
 5. **Data Layer (MongoDB StatefulSet + ReplicaSet)**  
    MongoDB runs as a StatefulSet (`mongo-0`, `mongo-1`, `mongo-2`) with stable network identities and persistent storage.  
@@ -79,6 +79,14 @@ This architecture ensures availability, scalability, and persistence, even when 
 6. Configure Mongo StatefulSet + ReplicaSet.
 7. Run validation tests.
 
+## Backend API Endpoints (CRUD)
+
+- `GET /` -> health check response (`API is working`).
+- `GET /items` -> list all items.
+- `POST /items` -> create a new item.
+- `PUT /items/:id` -> update an existing item.
+- `DELETE /items/:id` -> delete an item.
+
 ## 1) Install Ingress Controller
 
 Install NGINX Ingress Controller:
@@ -107,6 +115,13 @@ Check:
 ```bash
 kubectl get pods
 kubectl get svc
+kubectl get svc backend-service -o yaml
+```
+
+Expected service type:
+
+```yaml
+type: ClusterIP
 ```
 
 ## 3) Ingress Configuration
@@ -139,29 +154,29 @@ curl -H "Host: backend.local" http://localhost:8080
 
 ## 4) Create and Manage HPA
 
-Create HPA for `backend-deployment`:
+Apply HPA manifest for `backend-deployment`:
 
 ```bash
-kubectl autoscale deployment backend-deployment --cpu-percent=70 --min=1 --max=5
+kubectl apply -f K8s/hpa.yaml
 ```
 
 Check HPA and pods:
 
 ```bash
-kubectl get hpa
+kubectl get hpa backend-hpa
 kubectl get pods
 ```
 
 Edit HPA if needed:
 
 ```bash
-kubectl edit hpa backend-deployment
+kubectl edit hpa backend-hpa
 ```
 
 Important note:
 
-- `kubectl autoscale ...` creates a new HPA (it does not update an existing one with the same name).
-- To change target (for example `70` -> `40`), use `kubectl edit hpa ...` or delete/recreate HPA.
+- Keep `K8s/hpa.yaml` as the source of truth for autoscaling configuration.
+- If you change HPA values, apply the manifest again to keep the cluster state aligned with the repo.
 
 ## 5) Load Test the Backend
 

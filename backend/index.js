@@ -36,6 +36,39 @@ app.post("/items", async (req, res) => {
   res.status(201).json(savedItem);
 });
 
+// PUT update item by id
+app.put("/items/:id", async (req, res) => {
+  try {
+    const updatedItem = await Item.findByIdAndUpdate(req.params.id, req.body, {
+      new: true,
+      runValidators: true
+    });
+
+    if (!updatedItem) {
+      return res.status(404).json({ message: "Item not found" });
+    }
+
+    res.json(updatedItem);
+  } catch (err) {
+    res.status(400).json({ message: "Invalid request", error: err.message });
+  }
+});
+
+// DELETE item by id
+app.delete("/items/:id", async (req, res) => {
+  try {
+    const deletedItem = await Item.findByIdAndDelete(req.params.id);
+
+    if (!deletedItem) {
+      return res.status(404).json({ message: "Item not found" });
+    }
+
+    res.json({ message: "Item deleted successfully" });
+  } catch (err) {
+    res.status(400).json({ message: "Invalid request", error: err.message });
+  }
+});
+
 // Start server
 app.listen(3000, "0.0.0.0", () => {
   console.log("Server running on port 3000");
