@@ -154,6 +154,68 @@ Test with host header:
 curl -H "Host: backend.local" http://localhost:8080
 ```
 
+Test backend CRUD API through Ingress:
+
+```bash
+# Health
+curl -H "Host: backend.local" http://localhost:8080/
+
+# Create item
+curl -H "Host: backend.local" -X POST http://localhost:8080/items \
+  -H "Content-Type: application/json" \
+  -d '{"name":"post-1"}'
+
+# List items
+curl -H "Host: backend.local" http://localhost:8080/items
+
+# Update item (replace <id>)
+curl -H "Host: backend.local" -X PUT http://localhost:8080/items/<id> \
+  -H "Content-Type: application/json" \
+  -d '{"name":"post-1-updated"}'
+
+# Delete item (replace <id>)
+curl -H "Host: backend.local" -X DELETE http://localhost:8080/items/<id>
+```
+
+### Optional: Ingress without host-based routing
+
+If you do not want to use `host: backend.local`, you can remove host-based matching
+and route by path only.
+
+Example ingress:
+
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: backend-ingress
+spec:
+  ingressClassName: nginx
+  rules:
+    - http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: backend-service
+                port:
+                  number: 80
+```
+
+Apply and test:
+
+```bash
+kubectl apply -f K8s/ingress.yaml
+curl http://localhost:8080/
+curl http://localhost:8080/items
+```
+
+Note:
+
+- This is simpler for labs and local testing.
+- For production-like setups and multi-app routing, host-based ingress is preferred.
+
 ### Optional: Expose Backend with NodePort (Not required for this task)
 
 Use this only if you need direct node access (`NODE_IP:NODE_PORT`).
