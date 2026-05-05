@@ -1,4 +1,10 @@
 const express = require("express");
+const { webcrypto } = require("crypto");
+// Node 18 fallback for MongoDB driver that expects globalThis.crypto.
+if (!globalThis.crypto) {
+  globalThis.crypto = webcrypto;
+}
+
 const mongoose = require("mongoose");
 
 const app = express();
