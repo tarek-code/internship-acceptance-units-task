@@ -6,7 +6,7 @@ app.use(express.json());
 
 // Mongo connection
 mongoose.connect(
-  "mongodb://mongo-0.mongo:27017,mongo-1.mongo:27017,mongo-2.mongo:27017/mydb?replicaSet=rs0"
+  "mongodb://mongo-0.mongo.default.svc.cluster.local:27017,mongo-1.mongo.default.svc.cluster.local:27017,mongo-2.mongo.default.svc.cluster.local:27017/mydb?replicaSet=rs0"
 )
 .then(() => console.log("MongoDB connected"))
 .catch(err => console.log(err));
