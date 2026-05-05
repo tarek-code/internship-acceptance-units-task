@@ -435,7 +435,7 @@ Run:
 ```javascript
 use mydb
 db.items.insertOne({ name: "tarek" })
-db.users.find()
+db.items.find()
 exit
 ```
 
@@ -454,7 +454,7 @@ kubectl exec -it mongo-0 -- mongosh
 
 ```javascript
 use mydb
-db.users.find()
+db.items.find()
 ```
 
 Expected output should include your inserted document:
